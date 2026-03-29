@@ -1,0 +1,87 @@
+// App.js — Chess Game WebSocket Server
+// Run: node App.js
+// Requires: npm install ws
+
+const { WebSocketServer } = require("ws");
+
+const PORT = 8080;
+const wss = new WebSocketServer({ port: PORT });
+
+let clients = []; // max 2 players
+
+wss.on("connection", (ws) => {
+  // Reject more than 2 connections
+  if (clients.length >= 2) {
+    ws.send(JSON.stringify({ type: "error", message: "Game is full. Only 2 players allowed." }));
+    ws.close();
+    return;
+  }
+
+  // Assign player number (1 or 2)
+  const playerNumber = clients.length + 1;
+  ws.playerNumber = playerNumber;
+  clients.push(ws);
+
+  console.log(`Player ${playerNumber} connected. Total clients: ${clients.length}`);
+
+  // Tell this client which player they are
+  ws.send(JSON.stringify({ type: "assigned", player: playerNumber }));
+
+  // Tell all clients how many players are connected
+  broadcast({ type: "players_count", count: clients.length });
+
+  // Handle messages from this client
+  ws.on("message", (data) => {
+    let msg;
+    try {
+      msg = JSON.parse(data);
+    } catch {
+      console.error("Invalid JSON received:", data);
+      return;
+    }
+
+    // When a player clicks a cell, forward it to the OTHER player
+    if (msg.type === "cell_click") {
+      const payload = {
+        type: "opponent_click",
+        row: msg.row,
+        col: msg.col,
+        player: ws.playerNumber,
+      };
+
+      // Send only to the other client
+      clients.forEach((client) => {
+        if (client !== ws && client.readyState === 1) {
+          client.send(JSON.stringify(payload));
+        }
+      });
+
+      console.log(`Player ${ws.playerNumber} clicked cell [${msg.row}, ${msg.col}]`);
+    }
+  });
+
+  // Clean up on disconnect
+  ws.on("close", () => {
+    clients = clients.filter((c) => c !== ws);
+    console.log(`Player ${ws.playerNumber} disconnected. Total clients: ${clients.length}`);
+    broadcast({ type: "players_count", count: clients.length });
+    broadcast({ type: "opponent_disconnected" });
+  });
+
+  ws.on("error", (err) => {
+    console.error(`WebSocket error (Player ${ws.playerNumber}):`, err.message);
+  });
+});
+
+// Helper: send a message to all connected clients
+function broadcast(payload) {
+  const msg = JSON.stringify(payload);
+  clients.forEach((client) => {
+    if (client.readyState === 1) {
+      client.send(msg);
+    }
+  });
+}
+
+console.log(`Chess WebSocket server running on ws://localhost:${PORT}`);
+console.log("Waiting for 2 players to connect...");
