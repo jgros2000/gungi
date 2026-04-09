@@ -1,58 +1,70 @@
-// ─── StatusBar ───────────────────────────────────────────────────────────────
+// src/components/StatusBar.jsx
 
-function StatusBar({ phase, ready, currentTurn, playerNumber, playersCount, winner, onReady, onRestart }) {
-  const isMyTurn = currentTurn === playerNumber;
+export default function StatusBar({
+  phase, ready, placementTurn, currentTurn, playerNumber, playersCount, winner, onReady, onRestart,
+}) {
+  const isMyPlacementTurn = Number(placementTurn) === Number(playerNumber);
+  const isMyMoveTurn      = Number(currentTurn) === Number(playerNumber);
 
   let message = "";
-  if (playersCount < 2) message = "Waiting for opponent to connect...";
-  else if (phase === "placement") {
-    if (ready[playerNumber]) message = "Waiting for opponent to press Ready...";
-    else message = "Place your pieces, then press Ready.";
+  if (playersCount < 2) {
+    message = "Waiting for opponent to connect...";
+  } else if (phase === "placement") {
+    if (ready[playerNumber]) {
+      message = "Waiting for opponent to finish placing...";
+    } else if (isMyPlacementTurn) {
+      message = "Your turn to place — drag a piece onto your zone.";
+    } else {
+      message = "Opponent is placing a piece...";
+    }
   } else if (phase === "playing") {
-    message = isMyTurn ? "Your turn — click one of your pieces." : "Opponent's turn...";
+    message = isMyMoveTurn ? "Your turn — click a piece to move." : "Opponent's turn...";
   } else if (phase === "ended") {
-    message = winner === playerNumber ? "You win!" : "Opponent wins!";
+    message = winner === playerNumber ? "You win! 🎉" : "Opponent wins.";
   }
 
-  const bgColor = phase === "ended"
+  const bg = phase === "ended"
     ? (winner === playerNumber ? "#EAF3DE" : "#FCEBEB")
-    : playersCount === 2 && phase === "playing" && isMyTurn ? "#E6F1FB" : "#F1EFE8";
+    : (phase === "playing" && isMyMoveTurn) || (phase === "placement" && isMyPlacementTurn && !ready[playerNumber])
+      ? "#E6F1FB"
+      : "#F1EFE8";
 
-  const textColor = phase === "ended"
+  const color = phase === "ended"
     ? (winner === playerNumber ? "#3B6D11" : "#A32D2D")
-    : playersCount === 2 && phase === "playing" && isMyTurn ? "#185FA5" : "#5F5E5A";
+    : (phase === "playing" && isMyMoveTurn) || (phase === "placement" && isMyPlacementTurn && !ready[playerNumber])
+      ? "#185FA5"
+      : "#5F5E5A";
 
   return (
     <div style={{ marginBottom: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <div>
-          <span style={{ fontSize: 13, color: "#888" }}>You are </span>
-          <span style={{ fontSize: 14, fontWeight: 500 }}>Player {playerNumber}</span>
-        </div>
+        <span style={{ fontSize: 13, color: "#888" }}>
+          You are <strong style={{ color: "#222", fontWeight: 500 }}>Player {playerNumber}</strong>
+        </span>
         <div style={{ display: "flex", gap: 8 }}>
           {phase === "placement" && !ready[playerNumber] && playersCount === 2 && (
             <button onClick={onReady} style={{
-              padding: "6px 16px", borderRadius: 8, border: "0.5px solid #3B6D11",
-              background: "#EAF3DE", color: "#3B6D11", cursor: "pointer", fontSize: 13, fontWeight: 500,
+              padding: "6px 16px", borderRadius: 8,
+              border: "0.5px solid #3B6D11", background: "#EAF3DE",
+              color: "#3B6D11", cursor: "pointer", fontSize: 13, fontWeight: 500,
             }}>
               Ready
             </button>
           )}
-          {(phase === "ended") && (
+          {phase === "ended" && (
             <button onClick={onRestart} style={{
-              padding: "6px 16px", borderRadius: 8, border: "0.5px solid #ccc",
-              background: "transparent", cursor: "pointer", fontSize: 13,
+              padding: "6px 16px", borderRadius: 8,
+              border: "0.5px solid #ccc", background: "transparent",
+              cursor: "pointer", fontSize: 13,
             }}>
               Restart
             </button>
           )}
         </div>
       </div>
-      <div style={{ padding: "8px 12px", borderRadius: 8, fontSize: 13, background: bgColor, color: textColor }}>
+      <div style={{ padding: "8px 12px", borderRadius: 8, fontSize: 13, background: bg, color }}>
         {message}
       </div>
     </div>
   );
 }
-
-export default StatusBar;

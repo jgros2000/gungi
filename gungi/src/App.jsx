@@ -1,16 +1,20 @@
-import Board from './components/Board.jsx';
-import StatusBar from './components/StatusBar.jsx';
+// src/App.jsx
 import { useState, useEffect, useRef, useCallback } from "react";
+import Board from "./components/Board";
+import StatusBar from "./components/StatusBar";
+import PieceTray from "./components/PieceTray";
 
 const WS_URL = "ws://localhost:8080";
 
-function App() {
-  const [playerNumber, setPlayerNumber] = useState(null);
-  const [playersCount, setPlayersCount] = useState(0);
-  const [game, setGame] = useState(null);
-  const [errorMsg, setErrorMsg] = useState(null);
+export default function App() {
+  const [playerNumber, setPlayerNumber]     = useState(null);
+  const [playersCount, setPlayersCount]     = useState(0);
+  const [game, setGame]                     = useState(null);
+  const [errorMsg, setErrorMsg]             = useState(null);
+  const [draggingPiece, setDraggingPiece]   = useState(null);
   const wsRef = useRef(null);
 
+  // ── WebSocket connection ───────────────────────────────────────────────────
   useEffect(() => {
     const ws = new WebSocket(WS_URL);
     wsRef.current = ws;
@@ -19,14 +23,11 @@ function App() {
       const msg = JSON.parse(event.data);
       switch (msg.type) {
         case "assigned":
-          setPlayerNumber(msg.player);
+          setPlayerNumber(Number(msg.player));
           break;
         case "game_state":
           setGame(msg.game);
-          setPlayersCount(msg.playersCount);
-          break;
-        case "game_over":
-          // game_over is handled inside game_state via winner field
+          setPlayersCount(Number(msg.playersCount));
           break;
         case "opponent_disconnected":
           setErrorMsg("Opponent disconnected.");
@@ -43,18 +44,23 @@ function App() {
     return () => ws.close();
   }, []);
 
+  // ── Send helper ────────────────────────────────────────────────────────────
   const send = useCallback((payload) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(payload));
     }
   }, []);
 
-  const handlePlacePiece = (row, col, piece) => send({ type: "place_piece", row, col, piece });
-  const handleRemovePiece = (row, col) => send({ type: "remove_piece", row, col });
-  const handleReady = () => send({ type: "set_ready" });
-  const handleMovePiece = (fromRow, fromCol, toRow, toCol) =>
+  // ── Game actions ───────────────────────────────────────────────────────────
+  const handlePlacePiece  = (row, col, piece) => send({ type: "place_piece", row, col, piece });
+  const handleRemovePiece = (row, col)        => send({ type: "remove_piece", row, col });
+  const handleReady       = ()                => send({ type: "set_ready" });
+  const handleMovePiece   = (fromRow, fromCol, toRow, toCol) =>
     send({ type: "move_piece", fromRow, fromCol, toRow, toCol });
-  const handleRestart = () => send({ type: "restart" });
+  const handleRestart     = ()                => send({ type: "restart" });
+
+  const handleDragStart = (type) => setDraggingPiece(type);
+  const handleDragEnd   = ()     => setDraggingPiece(null);
 
   if (!game || !playerNumber) {
     return (
@@ -64,24 +70,35 @@ function App() {
     );
   }
 
+  const isMyPlacementTurn = game.placementTurn === playerNumber;
+
+  // Show tray only during placement, before ready, and when it's your turn
+  const showTray = game.phase === "placement"
+    && !game.ready[playerNumber]
+    && playersCount === 2;
+
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", maxWidth: 520, margin: "0 auto", padding: "24px 16px" }}>
+    <div
+      style={{ fontFamily: "system-ui, sans-serif", maxWidth: 520, margin: "0 auto", padding: "24px 16px" }}
+      onDragEnd={handleDragEnd}
+    >
+      {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>Chess</h1>
-        <div style={{ display: "flex", gap: 8, fontSize: 12, color: "#888" }}>
-          <span style={{
-            padding: "3px 10px", borderRadius: 20,
-            background: game.phase === "playing" ? "#E6F1FB" : "#F1EFE8",
-            color: game.phase === "playing" ? "#185FA5" : "#5F5E5A",
-          }}>
-            {game.phase === "placement" ? "Setup" : game.phase === "playing" ? "Playing" : "Ended"}
-          </span>
-        </div>
+        <span style={{
+          padding: "3px 10px", borderRadius: 20, fontSize: 12,
+          background: game.phase === "playing" ? "#E6F1FB" : "#F1EFE8",
+          color:      game.phase === "playing" ? "#185FA5" : "#5F5E5A",
+        }}>
+          {game.phase === "placement" ? "Setup" : game.phase === "playing" ? "Playing" : "Ended"}
+        </span>
       </div>
 
+      {/* Status bar */}
       <StatusBar
         phase={game.phase}
         ready={game.ready}
+        placementTurn={game.placementTurn}
         currentTurn={game.currentTurn}
         playerNumber={playerNumber}
         playersCount={playersCount}
@@ -90,6 +107,7 @@ function App() {
         onRestart={handleRestart}
       />
 
+      {/* Error message */}
       {errorMsg && (
         <div style={{
           padding: "8px 12px", borderRadius: 8, marginBottom: 12,
@@ -99,30 +117,40 @@ function App() {
         </div>
       )}
 
+      {/* Board */}
       <Board
         board={game.board}
         playerNumber={playerNumber}
         phase={game.phase}
+        placementTurn={game.placementTurn}
         currentTurn={game.currentTurn}
         ready={game.ready}
         playersCount={playersCount}
+        draggingPiece={draggingPiece}
         onPlacePiece={handlePlacePiece}
         onRemovePiece={handleRemovePiece}
         onMovePiece={handleMovePiece}
       />
 
+      {/* Piece tray — grayed out when it's not your placement turn */}
+      {showTray && (
+        <div style={{ opacity: isMyPlacementTurn ? 1 : 0.4, pointerEvents: isMyPlacementTurn ? "auto" : "none" }}>
+          <PieceTray
+            board={game.board}
+            playerNumber={playerNumber}
+            onDragStart={handleDragStart}
+          />
+        </div>
+      )}
+
+      {/* Legend */}
       <div style={{ marginTop: 12, display: "flex", gap: 16, fontSize: 12, color: "#888" }}>
-        <span>
-          <span style={{ fontWeight: 500, color: "#185FA5" }}>Blue</span> = Player 1
-        </span>
-        <span>
-          <span style={{ fontWeight: 500, color: "#A32D2D" }}>Red</span> = Player 2
-        </span>
+        <span><span style={{ fontWeight: 500, color: "#185FA5" }}>Blue</span> = Player 1</span>
+        <span><span style={{ fontWeight: 500, color: "#A32D2D" }}>Red</span> = Player 2</span>
         {game.phase === "placement" && (
-          <span>Click a cell to place · Click your piece to remove</span>
+          <span>Right-click your piece to remove it</span>
         )}
       </div>
     </div>
   );
 }
-export default App;

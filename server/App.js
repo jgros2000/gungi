@@ -108,6 +108,7 @@ function serializeGame(game) {
   return {
     board: game.board,
     phase: game.phase,
+    placementTurn: game.placementTurn,
     ready: game.ready,
     currentTurn: game.currentTurn,
     winner: game.winner,
