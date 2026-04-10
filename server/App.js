@@ -48,17 +48,6 @@ wss.on("connection", (ws) => {
         break;
       }
 
-      // Player removes a piece during setup
-      case "remove_piece": {
-        const result = removePiece(game, player, msg.row, msg.col);
-        if (!result.ok) {
-          ws.send(JSON.stringify({ type: "error", message: result.reason }));
-          return;
-        }
-        broadcast({ type: "game_state", game: serializeGame(game), playersCount: clients.length });
-        break;
-      }
-
       // Player presses Ready
       case "set_ready": {
         const result = setReady(game, player);

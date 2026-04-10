@@ -59,14 +59,6 @@ export default function Board({
     }
   };
 
-  // ── Right-click to remove own piece during placement ──────────────────────
-  const handleContextMenu = (e, row, col) => {
-    e.preventDefault();
-    if (phase !== "placement" || ready[playerNumber]) return;
-    const cell = board[row][col];
-    if (cell && cell.player === playerNumber) onRemovePiece(row, col);
-  };
-
   // ── Drag-and-drop handlers ─────────────────────────────────────────────────
   const handleDragOver = (e, row, col) => {
     if (phase !== "placement" || ready[playerNumber]) return;
@@ -131,7 +123,6 @@ export default function Board({
             <div
               key={`${rIdx}-${cIdx}`}
               onClick={() => handleCellClick(rIdx, cIdx)}
-              onContextMenu={(e) => handleContextMenu(e, rIdx, cIdx)}
               onDragOver={(e) => handleDragOver(e, rIdx, cIdx)}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, rIdx, cIdx)}
