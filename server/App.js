@@ -3,7 +3,7 @@
 // Requires: npm install ws
 
 const { WebSocketServer } = require("ws");
-const { createGame, placePiece, removePiece, setReady, movePiece } = require("./gameState");
+const { createGame, placePiece, setReady, movePiece } = require("./gameState");
 
 const PORT = 8080;
 const wss = new WebSocketServer({ port: PORT });
