@@ -23,7 +23,7 @@ function canLand(board, fromRow, fromCol, r, c) {
 
   const targetPlayer = top(target).player;
   if (targetPlayer === attackerPlayer) {
-    return attacker.length + target.length <= MAX_HEIGHT;
+    return 1 + target.length <= MAX_HEIGHT;
   } else {
     return attacker.length >= target.length;
   }

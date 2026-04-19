@@ -4,11 +4,34 @@ const { getValidMoves, top, MAX_HEIGHT } = require("./pieces");
 const GRID_SIZE     = 9;
 const PIECE_LIMITS  = { K: 1, Q: 1, R: 2, B: 2, N: 2, P: 8 };
 const PLACEMENT_ROWS = { 1: [6, 7, 8], 2: [0, 1, 2] };
+const DEBUG_MODE = true;
 
 function emptyBoard() {
   return Array.from({ length: GRID_SIZE }, () =>
     Array.from({ length: GRID_SIZE }, () => [])
   );
+}
+
+function debugBoard() {
+  const b = emptyBoard();
+ 
+  const place = (row, col, type, player) => b[row][col].push({ type, player });
+ 
+  // Player 2 (top) — row 0: back rank, row 1: extra pieces, row 2: pawns
+  place(0, 0, "R", 2); place(0, 1, "N", 2); place(0, 2, "B", 2);
+  place(0, 3, "Q", 2); place(0, 4, "K", 2); place(0, 5, "B", 2);
+  place(0, 6, "N", 2); place(0, 7, "R", 2);
+  place(1, 0, "P", 2); place(1, 1, "P", 2); // extra pieces on row 1
+  for (let c = 0; c < 9; c++) place(2, c, "P", 2);
+ 
+  // Player 1 (bottom) — row 8: back rank, row 7: extra pieces, row 6: pawns
+  place(8, 0, "R", 1); place(8, 1, "N", 1); place(8, 2, "B", 1);
+  place(8, 3, "Q", 1); place(8, 4, "K", 1); place(8, 5, "B", 1);
+  place(8, 6, "N", 1); place(8, 7, "R", 1);
+  place(7, 0, "P", 1); place(7, 1, "P", 1); // extra pieces on row 7
+  for (let c = 0; c < 9; c++) place(6, c, "P", 1);
+ 
+  return b;
 }
 
 function countPieces(board, player) {
@@ -21,6 +44,16 @@ function countPieces(board, player) {
 }
 
 function createGame() {
+  if (DEBUG_MODE) {
+    return {
+      board: debugBoard(),
+      phase: "playing",
+      placementTurn: null,
+      ready: { 1: true, 2: true },
+      currentTurn: 1,
+      winner: null,
+    };
+  }
   return {
     board: emptyBoard(),
     phase: "placement",
@@ -59,6 +92,7 @@ function placePiece(game, player, row, col, type) {
 
 function setReady(game, player) {
   if (game.phase !== "placement") return { ok: false, reason: "Already started" };
+
   game.ready[player] = true;
   if (game.ready[1] && game.ready[2]) {
     game.phase = "playing";

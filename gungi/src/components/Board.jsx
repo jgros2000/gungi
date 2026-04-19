@@ -1,69 +1,32 @@
 // src/components/Board.jsx
 import { useState } from "react";
 import { getValidMoves, top, PLACEMENT_ROWS } from "../utils/moves";
+import "./Board.css";
 
-const GRID_SIZE  = 9;
+const GRID_SIZE    = 9;
 const STACK_OFFSET = 6; // px each disc shifts upward
-
-const PLAYER_COLORS = {
-  1: { bg: "#2563EB", border: "#1D4ED8", text: "#fff" },
-  2: { bg: "#DC2626", border: "#B91C1C", text: "#fff" },
-};
 
 function DiscStack({ stack }) {
   if (stack.length === 0) return null;
 
-  // Total vertical space the stack occupies so the cell can reserve it
   const totalOffset = (stack.length - 1) * STACK_OFFSET;
 
   return (
-    <div style={{
-      position: "absolute",
-      // Center horizontally, anchor to bottom of cell
-      left: "50%",
-      bottom: 6,
-      transform: "translateX(-50%)",
-      width: 34,
-      // Height grows with stack so discs don't clip into the cell above
-      height: 34 + totalOffset,
-      pointerEvents: "none",
-    }}>
+    <div
+      className="disc-stack"
+      style={{ height: 34 + totalOffset }}
+    >
       {stack.map((piece, i) => {
-        const c = PLAYER_COLORS[piece.player];
         const isTop = i === stack.length - 1;
-        const bottomOffset = i * STACK_OFFSET;
 
         return (
           <div
             key={i}
-            style={{
-              position: "absolute",
-              left: 0,
-              bottom: bottomOffset,
-              width: 34,
-              height: 34,
-              borderRadius: "50%",
-              background: c.bg,
-              border: `2px solid ${c.border}`,
-              boxShadow: isTop
-                ? "0 2px 5px rgba(0,0,0,0.3)"
-                : "0 1px 2px rgba(0,0,0,0.2)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: i + 1,
-            }}
+            className={`disc player-${piece.player} ${isTop ? "top" : ""}`}
+            style={{ bottom: i * STACK_OFFSET, zIndex: i + 1 }}
           >
-            {/* Only top disc shows label */}
             {isTop && (
-              <span style={{
-                fontSize: 12,
-                fontWeight: 700,
-                color: c.text,
-                userSelect: "none",
-              }}>
-                {piece.type}
-              </span>
+              <span className="disc-label">{piece.type}</span>
             )}
           </div>
         );
@@ -143,94 +106,61 @@ export default function Board({
     if (type) onPlacePiece(row, col, type);
   };
 
-  // ── Cell background ───────────────────────────────────────────────────────
-  const getTileBg = (row, col) => {
+  // ── Cell class list ───────────────────────────────────────────────────────
+  const getCellClass = (row, col) => {
     const isLight    = (row + col) % 2 === 0;
     const isSelected = selectedCell?.row === row && selectedCell?.col === col;
     const isValid    = validMoves.some(([r, c]) => r === row && c === col);
+    const isCapture  = isValid && top(board[row][col]) !== null;
     const isDragOver = dragOverCell?.row === row && dragOverCell?.col === col;
     const isMyZone   = myRows.includes(row);
+    const isDragging = !!draggingPiece && phase === "placement" && isMyZone;
 
-    if (isSelected)             return "#6EE7CA";
-    if (isDragOver && isMyZone) return "#93C5FD";
-    if (isValid)                return top(board[row][col]) ? "#FDBA74" : "#86EFAC";
-    if (draggingPiece && phase === "placement" && isMyZone)
-      return isLight ? "#DBEAFE" : "#BFDBFE";
-    return isLight ? "#F0EDE4" : "#B0ADA4";
+    const classes = ["cell"];
+
+    // Background — priority order matters
+    if (isSelected)              classes.push("selected");
+    else if (isDragOver && isMyZone) classes.push("drag-over");
+    else if (isCapture)          classes.push("capture");
+    else if (isValid)            classes.push("valid");
+    else if (isDragging)         classes.push("my-zone-drag", isLight ? "light" : "dark");
+    else                         classes.push(isLight ? "light" : "dark");
+
+    // Zone outline during placement
+    if (phase === "placement" && isMyZone && !ready[playerNumber]) classes.push("my-zone");
+
+    // Cursor
+    if (!canInteract)                              classes.push("no-interact");
+    else if (phase === "placement" && isMyZone)    classes.push("place");
+
+    return classes.join(" ");
   };
 
   return (
-    <div style={{
-      display: "grid",
-      gridTemplateColumns: `repeat(${GRID_SIZE}, minmax(0, 1fr))`,
-      border: "2px solid #7A7167",
-      borderRadius: 8,
-      overflow: "visible",
-      width: "100%",
-      background: "#7A7167",
-      gap: "1px",
-    }}>
+    <div className="board">
       {displayRows.map((rIdx) =>
         displayCols.map((cIdx) => {
           const stack  = board[rIdx][cIdx];
-          const isValid  = validMoves.some(([r, c]) => r === rIdx && c === cIdx);
-          const isMyZone = myRows.includes(rIdx);
+          const isValid = validMoves.some(([r, c]) => r === rIdx && c === cIdx);
 
           return (
             <div
               key={`${rIdx}-${cIdx}`}
+              className={getCellClass(rIdx, cIdx)}
+              style={{ zIndex: stack.length }}
               onClick={() => handleCellClick(rIdx, cIdx)}
               onDragOver={(e) => handleDragOver(e, rIdx, cIdx)}
               onDragLeave={() => setDragOverCell(null)}
               onDrop={(e) => handleDrop(e, rIdx, cIdx)}
-              style={{
-                aspectRatio: "1",
-                background: getTileBg(rIdx, cIdx),
-                position: "relative",
-                cursor: canInteract
-                  ? (phase === "placement" && isMyZone ? "copy" : "pointer")
-                  : "default",
-                outline: phase === "placement" && isMyZone && !ready[playerNumber]
-                  ? "1.5px dashed rgba(59,130,246,0.45)" : "none",
-                outlineOffset: "-3px",
-                boxShadow: isValid ? "inset 0 0 0 2px rgba(34,197,94,0.7)" : "none",
-                overflow: "visible",
-                zIndex: stack.length,
-              }}
             >
               <DiscStack stack={stack} />
 
-              {/* Valid move dot for empty cells */}
               {isValid && stack.length === 0 && (
-                <div style={{
-                  position: "absolute",
-                  top: "50%", left: "50%",
-                  transform: "translate(-50%, -50%)",
-                  width: 10, height: 10,
-                  borderRadius: "50%",
-                  background: "rgba(34,197,94,0.8)",
-                  pointerEvents: "none",
-                  zIndex: 5,
-                }} />
+                <div className="valid-dot" />
               )}
 
-              {/* Stack count */}
               {stack.length > 1 && (
-                <div style={{
-                  position: "absolute",
-                  top: 2, right: 3,
-                  fontSize: 9,
-                  fontWeight: 700,
-                  color: "#fff",
-                  background: "rgba(0,0,0,0.5)",
-                  borderRadius: 6,
-                  padding: "0 3px",
-                  lineHeight: "14px",
-                  zIndex: 20,
-                  pointerEvents: "none",
-                }}>
-                  ×{stack.length}
-                </div>
+                <div className="stack-badge">×{stack.length}</div>
               )}
             </div>
           );

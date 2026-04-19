@@ -1,0 +1,102 @@
+/* src/components/Board.css */
+
+/* ── Board grid ────────────────────────────────────────────────────────────── */
+.board {
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  border: 2px solid #7A7167;
+  border-radius: 8px;
+  overflow: visible;
+  width: 100%;
+  background: #7A7167;
+  gap: 1px;
+}
+
+/* ── Cell ──────────────────────────────────────────────────────────────────── */
+.cell {
+  aspect-ratio: 1;
+  position: relative;
+  overflow: visible;
+  cursor: pointer;
+  outline-offset: -3px;
+  transition: background 0.1s;
+}
+
+.cell.light    { background: #F0EDE4; }
+.cell.dark     { background: #B0ADA4; }
+.cell.selected { background: #6EE7CA; }
+.cell.valid    { box-shadow: inset 0 0 0 2px rgba(34,197,94,0.7); background: #86EFAC; }
+.cell.capture  { box-shadow: inset 0 0 0 2px rgba(34,197,94,0.7); background: #FDBA74; }
+.cell.drag-over { background: #93C5FD; }
+.cell.my-zone-drag { background: #DBEAFE; }
+.cell.my-zone-drag.dark { background: #BFDBFE; }
+.cell.my-zone  { outline: 1.5px dashed rgba(59,130,246,0.45); }
+.cell.no-interact { cursor: default; }
+.cell.place    { cursor: copy; }
+
+/* ── Disc stack container ──────────────────────────────────────────────────── */
+.disc-stack {
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  transform: translateX(-50%);
+  width: 34px;
+  pointer-events: none;
+}
+
+/* ── Individual disc ───────────────────────────────────────────────────────── */
+.disc {
+  position: absolute;
+  left: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-width: 2px;
+  border-style: solid;
+}
+
+.disc.player-1       { background: #2563EB; border-color: #1D4ED8; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+.disc.player-2       { background: #DC2626; border-color: #B91C1C; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+.disc.top.player-1   { box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+.disc.top.player-2   { box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+
+/* ── Disc label (only shown on top disc) ───────────────────────────────────── */
+.disc-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  user-select: none;
+}
+
+/* ── Valid move dot (empty cell) ───────────────────────────────────────────── */
+.valid-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(34,197,94,0.8);
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ── Stack count badge ─────────────────────────────────────────────────────── */
+.stack-badge {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0,0,0,0.5);
+  border-radius: 6px;
+  padding: 0 3px;
+  line-height: 14px;
+  z-index: 20;
+  pointer-events: none;
+}

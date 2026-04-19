@@ -27,7 +27,7 @@ function canLand(board, fromRow, fromCol, r, c) {
 
   if (targetPlayer === attackerPlayer) {
     // Friendly stack — can only land if combined height <= MAX_HEIGHT
-    return attacker.length + target.length <= MAX_HEIGHT;
+    return 1 + target.length <= MAX_HEIGHT;
   } else {
     // Enemy stack — can only attack if attacker height >= defender height
     return attacker.length >= target.length;
